@@ -100,10 +100,6 @@ merge4 = pd.merge(merge3,CVD,how='left',on='HPID')
 temp = pd.merge(merge4,comorbidity,how='left',on='HPID')
 display(temp.head(10), temp.agg(['count','nunique']))
 
-# exclude patients without hypertension
-temp_a = temp[temp['HTN'] == 1]
-temp_a
-
 
 # medication adherence
 cd['CD6'].value_counts()
@@ -140,6 +136,7 @@ tem = pd.concat([cd['HPID'], cd['CDNUM'], adhere], axis=1)
 tem.columns = ['HPID','CDNUM','adhere']
 display(tem.head(10), tem.agg(['count','nunique']))
 
+
 # exclude patients' with no medication prescription
 cd_loc1 = tem.loc[tem['adhere'] != -1]
 cd_loc1.shape 
@@ -152,6 +149,191 @@ adherence.describe()
 
 
 
+# merge data frame with comorbidity
+mdat = pd.merge(adherence, temp, how='left', on='HPID') 
+mdat  
+
+mdat_2= mdat.fillna(-1) # 결측 값은 -1 덮어서 결측처리 
+mdat_2
+
+
+# exclude patients without hypertension
+mdat_2 = mdat_2[mdat_2['HTN'] == 1]
+mdat_2
+
+# exclude patients no comorbidity 
+mdat_2 = mdat_2[mdat_2['comorbid'] != 0]
+mdat_2
+
+display(mdat_2.head(10), mdat_2.agg(['count','nunique']))
 
 
 
+
+# Covariates
+ind = pd.read_csv('C:/Users/lynjee_1111/Desktop/t18ind.csv')
+appen = pd.read_csv('C:/Users/lynjee_1111/Desktop/t18appen.csv')
+hh = pd.read_csv('C:/Users/lynjee_1111/Desktop/t18hh.csv')
+
+var = pd.merge(ind, hh, how='inner', on='HHID')
+var2 = pd.merge(var, appen, how='inner', on='HPID')
+
+display(var2.tail(10), var2.agg(['count','nunique']))
+
+# age 
+age = 2018-var2['C4_0']  #2018 dataset
+age
+
+# marital status
+marital_status = var2['C7'].replace(to_replace = 2, value=0)
+marital_status = marital_status.replace(to_replace = 3, value=0)
+marital_status = marital_status.replace(to_replace = 4, value=0)
+marital_status = marital_status.replace(to_replace = 5, value=0)
+marital_status.value_counts() 
+
+
+# rural vs urban 
+var2['P2'].value_counts() #1 urban #2 rural 
+residence = var2['P2'].replace(to_replace = 2, value = 0)
+residence.value_counts()
+
+# education : 1) elementary 6th year and below ; 2) middle school 1,2 yr; 3) middle school 3 yr and above 
+
+education = []
+for i in range(0, var2.shape[0]):
+    if var2['C8'][i] <= 16:
+        education.append(1)
+   # elif (( df['C8'][i] == 21 ) or ( df['C8'][i] == 22 )):
+   #     education.append(2)
+    elif var2['C8'][i] >=23 :
+        education.append(3)
+    else:
+        education.append(2)             
+
+education = pd.DataFrame(education)
+education.value_counts()  
+
+#Disability
+disorder = []
+list1=[1,2,3,4,5,13,9,10,11,12,14,15] # physical disability 
+list2=[6,7,8] # mental disability 
+
+for i in range(0,var2.shape[0] ):
+    if var2['C13'][i] == -1:
+        disorder.append(0) # no disability
+    elif var2['C13'][i] in list2:
+        disorder.append(1) # mental
+    elif var2['C13'][i] in list1:
+        disorder.append(2) # physical 
+             
+disorder = pd.DataFrame(disorder)
+disorder.value_counts() 
+
+# patient experience
+conversation = var2['PA2']
+understanding = var2['PA3']
+curiosity = var2['PA4']
+decision = var2['PA5']
+
+conversation  =  conversation.replace(to_replace = -9, value= -1)
+understanding  =  understanding.replace(to_replace = -9, value= -1)
+curiosity =  curiosity.replace(to_replace = -9, value= -1)
+decision  =  decision.replace(to_replace = -9, value= -1)
+
+#PA2 = conversation
+conversation = conversation.replace(to_replace = 3, value=0)
+conversation = conversation.replace(to_replace = 4, value=0)
+conversation = conversation.replace(to_replace = 5, value=0)
+conversation = conversation.replace(to_replace = 2, value=1)
+
+
+#PA3 = understanding
+understanding = understanding.replace(to_replace = 3, value=0)
+understanding = understanding.replace(to_replace = 4, value=0)
+understanding = understanding.replace(to_replace = 5, value=0)
+understanding = understanding.replace(to_replace = 2, value=1)
+
+
+#PA4 = curiosity
+curiosity = curiosity.replace(to_replace = 3, value=0)
+curiosity = curiosity.replace(to_replace = 4, value=0)
+curiosity = curiosity.replace(to_replace = 5, value=0)
+curiosity = curiosity.replace(to_replace = 2, value=1)
+
+
+#PA5 = decision
+decision = decision.replace(to_replace = 3, value=0)
+decision = decision.replace(to_replace = 4, value=0)
+decision = decision.replace(to_replace = 5, value=0)
+decision = decision.replace(to_replace = 2, value=1)
+decision = decision.replace(to_replace = 6, value=2)
+decision.value_counts() # 1: optimal, 0: poor, 2: did not want to participate 
+
+# Regular source of care 
+usual_care = var2['SE7']
+usual_care =  usual_care.replace(to_replace = 2, value= 0)
+usual_care =  usual_care.replace(to_replace = -9, value= -1)
+usual_care.value_counts()
+
+
+# unmet medical needs
+unmet = var2['SE1']
+unmet =  unmet.replace(to_replace = 2, value= 0)
+unmet =  unmet.replace(to_replace = 3, value= -1)
+unmet =  unmet.replace(to_replace = -9, value= -1)
+unmet.value_counts()
+
+
+# dataframe including only covariates 
+factor = pd.concat([var2['HPID'], 
+                    var2['C4_0'], age, 
+                    var2['C3'], gender, 
+                    var2['C7'], marital_status, 
+                    var2['P2'], residence, 
+                    var2['TOTAL_Q5_TOT_x'], income,
+                    var2['C8'], education,  
+                    var2['SJ7'], health_verse, 
+                    var2['C24'], econ,
+                    var2['C13'], disorder, 
+                    var2['SH25'], activity_limit,
+                    var2['PA2'], var2['PA3'], var2['PA4'], var2['PA5'], conversation, understanding, curiosity, decision, 
+                    var2['SE7'], usual_care,
+                    var2['SE1'], unmet,
+                    var2['C11'], health_care], axis=1)
+
+factor.columns = ['HPID', 
+                  'C4_0', 'age', 
+                  'C3', 'gender', 
+                  'C7', 'marital_status', 
+                  'P2', 'residence', 
+                  'TOTAL_Q5_TOT_x', 'income',
+                  'C8', 'education', 
+                  'SJ7', 'health_verse',
+                  'C24', 'econ',
+                  'C13', 'disorder', 
+                  'SH25', 'activity_limit',
+                  'PA2', 'PA3', 'PA4', 'PA5', 'conversation', 'understanding', 'curiosity', 'decision', 
+                  'SE7', 'usual_care',
+                  'SE1', 'unmet',
+                  'C11', 'health_care']
+                  
+                  
+# add covariates with adherence+comorbidity dataframe
+df = pd.merge(factor, mdat_2, how='right',on='HPID')
+display(df.tail(10), df.agg(['count','nunique']))
+
+
+# groups based on medication adherence 
+
+adh_group = []
+
+for i in range(0, df_2.shape[0]):
+    if df_2['adhere'][i] == 0 :
+        adh_group.append(0)
+    elif df_2['adhere'][i] == 1  :
+        adh_group.append(2)
+    else:
+        adh_group.append(1)             
+
+adh_group = pd.DataFrame(adh_group)
+adh_group.value_counts() 
