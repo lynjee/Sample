@@ -153,7 +153,7 @@ adherence.describe()
 mdat = pd.merge(adherence, temp, how='left', on='HPID') 
 mdat  
 
-mdat_2= mdat.fillna(-1) # 결측 값은 -1 덮어서 결측처리 
+mdat_2= mdat.fillna(-1) 
 mdat_2
 
 
